@@ -19,10 +19,19 @@
 # To Run
 
 * First install `Pytesseract`
-* Install `Flask`
+* Install the requirements in `requirements.txt` using the command:
+    ```bash
+    pip install -r requirements.txt
+    ```
 * Then run the `full_stack_http.py` file.
 * Then run the `web_interface.py` file.
 * Go to the browser and load the URL provided in the previous step.
 * Click the upload button.
 * Select your image and submit the form.
 * Wait for the result to be loaded.
+
+# To Run With Docker
+
+* If you have Docker installed and Docker-compose, then you can use this method.
+* Just run `docker-compose -f app.yaml up`.
+* The default port for the application is port 80.

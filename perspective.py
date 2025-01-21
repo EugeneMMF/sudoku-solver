@@ -49,7 +49,7 @@ def get_points(image:np.ndarray, boxes:list[list[int]], grid_size:tuple[int,int]
         results.append((val, (int((h-center_y)/s2), int(center_x/s1))))
     return results
 
-def resolve_image(path:str) -> tuple[tuple,list[tuple[int,tuple]]]:
+def resolve_image(path:str, f="output.jpg") -> tuple[tuple,list[tuple[int,tuple]]]:
     # img = cv2.imread("images/image210.jpg")
     img = cv2.imread(path)
     numbers = [str(i) for i in range(10)]
@@ -72,14 +72,13 @@ def resolve_image(path:str) -> tuple[tuple,list[tuple[int,tuple]]]:
     output = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
     norm_img = np.zeros((output.shape[0], output.shape[1]))
     output = cv2.normalize(output, norm_img, 0, 255, cv2.NORM_MINMAX)
-    output1 = cv2.threshold(output, 140, 255, cv2.THRESH_BINARY_INV)[1]
-    if np.average(output1.flatten()) > 128:
-        output = cv2.threshold(output, 140, 255, cv2.THRESH_BINARY)[1]
+    output1 = cv2.threshold(output, 130, 255, cv2.THRESH_BINARY_INV)[1]
+    if np.average(output1.flatten()) < 128:
+        output = cv2.threshold(output, 120, 255, cv2.THRESH_BINARY)[1]
     else:
         output = output1
     output = cv2.GaussianBlur(output, (1,1), 0)
     boxes = pt.image_to_boxes(output, "eng", config=r'-c tessedit_char_whitelist=0123456789 --psm 13 --oem 3')
-    print(boxes)
     h,w = output.shape
     new_boxes_str = ""
     new_boxes = []
@@ -95,4 +94,6 @@ def resolve_image(path:str) -> tuple[tuple,list[tuple[int,tuple]]]:
     return grid_size,final_points
 
 if "__main__" == __name__:
-    print(resolve_image("f2.jpg"))
+    print(resolve_image("/home/eugene/Downloads/Screenshot_2025-01-21-14-31-08-69_fc3459bca90ebc6768c1687f81925e0e.jpg", "output.jpg"))
+    print(resolve_image("/home/eugene/Downloads/Screenshot_2025-01-21-16-12-58-26_fc3459bca90ebc6768c1687f81925e0e.jpg", "output2.jpg"))
+    print(resolve_image("/home/eugene/Downloads/Screenshot_2025-01-21-14-44-00-17_fc3459bca90ebc6768c1687f81925e0e.jpg", "output3.jpg"))
