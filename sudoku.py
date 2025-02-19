@@ -3,6 +3,7 @@
 
 from copy import deepcopy
 import pygame as pg
+import heapq
 
 VISITED_COLOR = (50,50,50)
 AGENT_COLOR = (255,0,0)
@@ -27,7 +28,7 @@ class Cell():
         self.name = name
         self.value:int|str = None
         self.domain:list[int] = deepcopy(domain)
-    
+
 class Grid():
     """The actual sudoku grid.
     """
@@ -43,7 +44,7 @@ class Grid():
         if not self.rows or not self.columns:
             return
         self.grid_len = self.rows * self.columns
-        self.domain:list[int] = [i for i in range(1, min(10, self.grid_len+1))]
+        self.domain:list[int|str] = [i for i in range(1, min(10, self.grid_len+1))]
         if self.grid_len >= 10:
             self.domain.extend(chr(ord('A') + i - 10) for i in range(10, self.grid_len+1))
         self.cells:list[Cell] = [Cell(i, self.domain) for i in range(self.grid_len * self.grid_len)]
@@ -51,7 +52,8 @@ class Grid():
         self.solved_cells:list[int] = []
         self.initial_solved:list[int] = []
         self.initial_unsolved:list[int] = [i for i in range(self.grid_len * self.grid_len)]
-    
+        self.cell_values: list[list[str]] = [["." for i in range(self.grid_len)] for j in range(self.grid_len)]
+
     def preassign(self, values:dict[tuple, int]) -> None:
         """Preassigns particular value to the cells already given in the problem.
 
@@ -68,7 +70,8 @@ class Grid():
             self.initial_unsolved.remove(number)
             self.initial_solved.append(number)
             self.solved_cells.append(number)
-    
+            self.cell_values[i[0]][i[1]] = str(value)
+
     def unassign_last(self, number:int|None = None):
         """Unassigns either the last value assigned to a cell or a particular cell given by number.
 
@@ -85,10 +88,11 @@ class Grid():
         self.initial_unsolved.append(number)
         self.cells[number].domain = deepcopy(self.domain)
         self.cells[number].value = None
-    
+
     def solve(self) -> None:
         """Tries to solve the sudoku.
         """
+        return self.solveSudoku()
         while len(self.unsolved_cells) > 0:
             changed = False
             i = 0
@@ -185,7 +189,7 @@ class Grid():
                 continue
             if not changed:
                 return
-    
+
     def render_cells(self, window:pg.Surface) -> None:
         """Draws the grid and populates it with the value of the cells.
 
@@ -230,7 +234,7 @@ class Grid():
             #         x = int(i%self.grid_len)
             #         textRect.center = (int((x+0.5)*px),int((y+0.5)*py))
             #         window.blit(text, textRect)
-    
+
     def render_grid(self, size:tuple[int, int]=SIZE) -> None:
         """Creates the grid window and renders it.
 
@@ -247,7 +251,7 @@ class Grid():
                     return
             self.render_cells(window)
             pg.display.update()
-    
+
     def input_to_grid(self, size:tuple[int, int]=SIZE) -> None:
         """Allows for input of the value of the grid cells by clicking on a cell and typing the value.
 
@@ -284,7 +288,7 @@ class Grid():
                         self.unassign_last()
             self.render_cells(window)
             pg.display.update()
-    
+
     def save(self, filename:str) -> None:
         """Saves the current state of the grid in a file.\n
         Save format is:\n
@@ -305,7 +309,7 @@ class Grid():
         with open(filename, 'w') as f:
             f.write(s)
             f.close()
-    
+
     def load(self, filename:str):
         """Loads the grid from a saved state file created by calling Grid.save(filename)
 
@@ -346,7 +350,7 @@ class Grid():
                 self.cells[number].value = value
                 self.cells[number].domain = []
                 self.unsolved_cells.remove(number)
-    
+
     def save_grid_image(self, path:str, size:tuple[int, int]=SIZE) -> None:
         pg.init()
         window = pg.display.set_mode(size)
@@ -354,7 +358,59 @@ class Grid():
         self.render_cells(window)
         pg.image.save(window, path)
         pg.quit()
-          
+
+    def solveSudoku(self) -> None:
+        rows = [set() for _ in range(self.grid_len)]
+        cols = [set() for _ in range(self.grid_len)]
+        grids = [[set() for _ in range(self.rows)] for _ in range(self.columns)]
+        empty_cells = []
+        for i, row in enumerate(self.cell_values):
+            for j, number in enumerate(row):
+                if number == ".":
+                    empty_cells.append((i, j))
+                else:
+                    rows[i].add(number)
+                    cols[j].add(number)
+                    grids[i//self.rows][j//self.columns].add(number)
+
+        empty_cells = [
+            (i, j)
+            for i, j in empty_cells
+        ]
+        heapq.heapify(empty_cells)
+
+        def try_fill_board():
+            if not empty_cells:
+                return True
+
+            i, j = heapq.heappop(empty_cells)
+            row = rows[i]
+            col = cols[j]
+            grid = grids[i//self.rows][j//self.columns]
+            for temp_number in self.domain:
+                number = str(temp_number)
+                if (number in row or number in col or number in grid):
+                    continue
+                self.cell_values[i][j] = number
+                row.add(number)
+                col.add(number)
+                grid.add(number)
+
+                if try_fill_board():
+                    return True
+
+                row.remove(number)
+                col.remove(number)
+                grid.remove(number)
+
+            heapq.heappush(empty_cells, (i, j))
+            return False
+
+        try_fill_board()
+        for i,row in enumerate(self.cell_values):
+            for j,val in enumerate(row):
+                self.cells[int(i*self.grid_len + j)].value = val
+
 def main():
     r = int(input("Enter number of rows in a block: "))
     c = int(input("Enter number of columns in a block: "))
@@ -368,6 +424,6 @@ def main():
     # grid = Grid()
     # grid.load("s1.txt")
     grid.render_grid()
-  
+
 if __name__ == "__main__":
     main()
